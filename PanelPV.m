@@ -70,7 +70,8 @@ classdef PanelPV < handle
                        ( self.Tj / self.Tr )^3 * exp( self.q * self.EG / self.n / self.k *( 1 / self.Tr -1 / self.Tj));
         end
         
-        function [I, V] = iter(self)
+        %metodo de Newton (calvula corrente para um vetor de tensões dado)
+        function iter_i(self)
             
             self.i =   self.i - ...
                       ( self.iph_ - self.i - self.is_.*(exp((self.v/(self.Ns*self.Ms)+self.i.*self.Rs) ./ self.vt_)-1) - (self.v / (self.Ns*self.Ms) + self.i .* self.Rs) ./ self.Rp ) ./ ...
@@ -85,14 +86,19 @@ classdef PanelPV < handle
            self.i = zeros(size(self.v));
            
            for k = 1:6
-               self.iter();
+               self.iter_i();
            end
            
            if self.bypass
                self.v = max(self.v, 0);
            end
            if self.blocking
-               self.i = max(self.i, 0);
+               for k = 1: length(self.i)
+                   if self.i(k) <= 0
+                       self.i(k) = 0;
+                       self.v(k) = NaN;
+                   end
+               end
            end
            
            I = self.i;
@@ -101,6 +107,44 @@ classdef PanelPV < handle
            
         end
         
+        
+        %metodo de Newton (calvula tensao para um vetor de corretnes dado)
+        function iter_v(self)
+            
+            self.v =   self.v - ...
+                      ( self.iph_ - self.i - self.is_.*(exp((self.v/(self.Ns*self.Ms)+self.i.*self.Rs) ./ self.vt_)-1) - (self.v / (self.Ns*self.Ms) + self.i .* self.Rs) ./ self.Rp ) ./ ...
+                      (-self.is_.*exp((self.v/(self.Ns*self.Ms)+self.i.*self.Rs) ./ self.vt_)./(self.Ns*self.Ms)./self.vt_-1./(self.Ns*self.Ms)./ self.Rp);
+            
+        end
+        
+        
+        function [ I, V ] = solve_v(self, irrad, Tjc, ipa)
+           self.set_irrad(irrad);
+           self.set_temp(Tjc);
+           self.i = ipa;
+           self.v = ones(size(self.i)) * self.Voc *self.Ns *self.Ms;
+           
+           for k = 1:12
+               self.iter_v();
+           end
+           
+           if self.bypass
+               self.v = max(self.v, 0);
+           end
+           if self.blocking
+               for k = 1: length(self.i)
+                   if self.i(k) <= 0
+                       self.i(k) = 0;
+                       self.v(k) = NaN;
+                   end
+               end
+           end
+           
+           I = self.i;
+           V = self.v;
+           
+           
+        end
         
         
     end

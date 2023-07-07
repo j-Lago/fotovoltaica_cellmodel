@@ -58,7 +58,7 @@ Vmin = -20;
 
 
 
-v = Vmin : (Vmax-Vmin) / (Npt-1) : Vmax;
+%v = Vmin : (Vmax-Vmin) / (Npt-1) : Vmax;
 
 p1 = PanelPV();
 p2 = PanelPV();
@@ -69,38 +69,45 @@ p2.bypass = get(handles.bypass, 'Value');
 p1.blocking = get(handles.blocking, 'Value');
 p2.blocking = get(handles.blocking, 'Value');
 
-p1.solve_i(Psun*alpha1, Tamb+beta1, v);
-p2.solve_i(Psun*alpha2, Tamb+beta2, v);
+%p1.solve_i(Psun*alpha1, Tamb+beta1, v);
+%p2.solve_i(Psun*alpha2, Tamb+beta2, v);
+
+%if p2.bypass || p1.bypass
+    %imax = max(max(p1.i), max(p2.i));
+    %imin = min(min(p1.i), min(p2.i));
+    %ieq = imin : (imax - imin) / (Npt-1) : imax;
+    %veq = zeros(size(ieq));
+    %for k = 1 : length(ieq)
+    %   [~,id1] = min(abs(p1.i-ieq(k)));
+    %   [~,id2] = min(abs(p2.i-ieq(k)));
+    %   veq(k) = p1.v(id1) + p2.v(id2); 
+    %end
+%else
+    %imax = min(max(p1.i), max(p2.i));
+    %imin = max(min(p1.i), min(p2.i));
+    %ieq = imin : (imax - imin) / (Npt-1) : imax;
+    %veq = zeros(size(ieq));
+    %for k = 1 : length(ieq)
+    %   [~,id1] = min(abs(p1.i-ieq(k)));
+    %   [~,id2] = min(abs(p2.i-ieq(k)));
+    %   veq(k) = p1.v(id1) + p2.v(id2); 
+    %end
+%end
 
 
-if p2.bypass || p1.bypass
-    imax = max(max(p1.i), max(p2.i));
-    imin = min(min(p1.i), min(p2.i));
-    ieq = imin : (imax - imin) / (Npt-1) : imax;
-    veq = zeros(size(ieq));
-    for k = 1 : length(ieq)
-       [~,id1] = min(abs(p1.i-ieq(k)));
-       [~,id2] = min(abs(p2.i-ieq(k)));
-       veq(k) = p1.v(id1) + p2.v(id2); 
-    end
-else
-    imax = min(max(p1.i), max(p2.i));
-    imin = max(min(p1.i), min(p2.i));
-    ieq = imin : (imax - imin) / (Npt-1) : imax;
-    veq = zeros(size(ieq));
-    for k = 1 : length(ieq)
-       [~,id1] = min(abs(p1.i-ieq(k)));
-       [~,id2] = min(abs(p2.i-ieq(k)));
-       veq(k) = p1.v(id1) + p2.v(id2); 
-    end
-end
+ieq = y_lim(1) : (y_lim(2) - y_lim(1)) / (Npt-1) : y_lim(2);
+p1.solve_v(Psun*alpha1, Tamb+beta1, ieq);
+p2.solve_v(Psun*alpha2, Tamb+beta2, ieq);
+veq = p1.v + p2.v;
+ieq = p1.i;
 
 
 
 [~,Nop] = min(abs(veq - vstr));
-[~,Nop1] = min(abs(p1.i - ieq(Nop)));
-[~,Nop2] = min(abs(p2.i - ieq(Nop)));
-
+%[~,Nop1] = min(abs(p1.i - ieq(Nop)));
+%[~,Nop2] = min(abs(p2.i - ieq(Nop)));
+Nop1 = Nop;
+Nop2 = Nop;
 
 
 Istr = [ieq(Nop)   , 0 , 0 ];
@@ -127,7 +134,7 @@ if showP_flag
         Lp1.plot(p1.v, p1.i    .*     showP_flag .* p1.v);
         Lp2.plot(p2.v, p2.i    .*     showP_flag .* p2.v);
         Mp1.plot(p1.v(Nop1), p1.i(Nop1)    .*     showP_flag .* p1.v(Nop1) );
-        Mp2.plot(p2.v(Nop2), p2.i(Nop2)    .*     showP_flag .* p1.v(Nop2) );
+        Mp2.plot(p2.v(Nop2), p2.i(Nop2)    .*     showP_flag .* p2.v(Nop2) );
     end
     if get(handles.show_string, 'Value')
         Lmppt.plot( [veq(Nop)  , veq(Nop)], [y_lim(1) * showP_flag .* xP, y_lim(2) * showP_flag .* xP]);
@@ -151,7 +158,8 @@ else
         Mp2.plot(p2.v(Nop2), p2.i(Nop2) );
     end
     if get(handles.show_string, 'Value')
-        Lmppt.plot( [veq(Nop)  , veq(Nop)], [y_lim(1) , y_lim(2) ]);
+        %Lmppt.plot( [veq(Nop)  , veq(Nop)], [y_lim(1) , y_lim(2) ]);
+        Lmppt.plot( [vstr  , vstr], [y_lim(1) , y_lim(2) ]);
         Lmppt.plot( [x_lim(1)  , x_lim(2)], [ieq(Nop) , ieq(Nop) ]);
         Lstr.plot(veq, ieq);
         Mstr.plot(veq(Nop), ieq(Nop) );
@@ -232,7 +240,8 @@ set(imh,'ButtonDownFcn', {@click, handles});
  set(handles.psun_val, 'String', sprintf( '%3.0f W/m²', Psun) );
  set(handles.tamb_val, 'String', sprintf( '%2.1f °C', Tamb) );
 % 
-set(handles.vin_val, 'String', sprintf( '%2.1f V', veq(Nop)) );
+%set(handles.vin_val, 'String', sprintf( '%2.1f V', veq(Nop)) );
+set(handles.vin_val, 'String', sprintf( '%2.1f V', vstr) );
 set(handles.iin_val, 'String', sprintf( '%2.1f A', ieq(Nop)) );
 set(handles.pin_val, 'String', sprintf( '%3.0f W', veq(Nop)*ieq(Nop)) );
 % 
