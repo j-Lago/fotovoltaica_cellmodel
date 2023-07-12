@@ -80,8 +80,8 @@ classdef PanelPV < handle
         end
         
         function [ I, V ] = solve_i(self, irrad, Tjc, vpa)
-           self.set_irrad(irrad);
            self.set_temp(Tjc);
+           self.set_irrad(irrad);
            self.v = vpa;
            self.i = zeros(size(self.v));
            
@@ -119,8 +119,8 @@ classdef PanelPV < handle
         
         
         function [ I, V ] = solve_v(self, irrad, Tjc, ipa)
-           self.set_irrad(irrad);
            self.set_temp(Tjc);
+           self.set_irrad(irrad);
            self.i = ipa;
            self.v = ones(size(self.i)) * self.Voc *self.Ns *self.Ms;
            
